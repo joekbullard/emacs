@@ -1,27 +1,20 @@
-;;; init.el --- Modern Emacs configuration -*- lexical-binding: t -*-
-;;; ─── PACKAGE SETUP ────────────────────────────────────────────────────────
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(package-initialize)
-;; Refresh package list on first run
-(unless package-archive-contents
-  (package-refresh-contents))
-(unless (package-installed-p 'use-package)
-  (package-install 'use-package))
-(require 'use-package)
-(setq use-package-always-ensure t)   ; auto-install all packages
-;;; ─── CORE UI ──────────────────────────────────────────────────────────────
-(setq inhibit-startup-message t)     ; no splash screen
-(scroll-bar-mode -1)                 ; no scrollbar
-(tool-bar-mode -1)                   ; no toolbar
-(tooltip-mode -1)                    ; no tooltips
 (menu-bar-mode -1)                   ; no menu bar (remove if you prefer it)
+(tool-bar-mode -1)                   ; no tool bar
 (set-fringe-mode 8)                  ; breathing room at edges
 (column-number-mode t)               ; show column in modeline
 (global-display-line-numbers-mode t) ; line numbers everywhere
 (setq display-line-numbers-type 'relative) ; relative numbers (like vim); use t for absolute
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;; Comment/uncomment this line to enable MELPA Stable if desired.  See `package-archive-priorities`
+;; and `package-pinned-packages`. Most users will not need or want to do this.
+;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+(package-initialize)
+(setq use-package-always-ensure t)   ; auto-install any missing use-package packages
 ;; Font — change to taste
-(set-face-attribute 'default nil :family "JetBrains Mono" :height 130)
+(set-face-attribute 'default nil
+                    :family "JetBrainsMono Nerd Font"
+                    :height 110)
 ;; Fallback if JetBrains Mono isn't installed:
 ;; (set-face-attribute 'default nil :family "DejaVu Sans Mono" :height 130)
 ;;; ─── BEHAVIOUR ────────────────────────────────────────────────────────────
@@ -78,6 +71,12 @@
 ;;; ─── GIT: MAGIT ───────────────────────────────────────────────────────────
 (use-package magit                   ; NOTE: fixed missing opening paren in base template
   :bind ("C-c g" . magit-status))
+;;; ─── MULTIPLE CURSORS ─────────────────────────────────────────────────────
+(use-package multiple-cursors
+  :bind
+  (("C->" . mc/mark-next-like-this)
+   ("C-<" . mc/mark-previous-like-this)
+   ("C-c C-<" . mc/mark-all-like-this)))
 ;;; ─── PROJECT MANAGEMENT ───────────────────────────────────────────────────
 ;; project.el is built-in; just add a keybinding
 (global-set-key (kbd "C-c p") project-prefix-map)
@@ -98,6 +97,10 @@
 (use-package markdown-mode)
 (use-package yaml-mode)
 (use-package rust-mode)
+(use-package csv-mode
+  :mode "\\.csv\\'")
+(use-package nix-mode
+  :mode "\\.nix\\'")
 ;;; ─── CLOJURE ──────────────────────────────────────────────────────────────
 
 ;; paredit — structural S-expression editing; essential for all Lisps.
@@ -159,8 +162,11 @@
   (cider-save-file-on-load t)              ; auto-save before loading buffer
   ;; eldoc — show function arglists in the minibuffer as you type.
   (cider-eldoc-display-for-symbol-at-point t)
+  (comint-scroll-to-bottom-on-output t)
+  (cider-interactive-eval-output-destination 'repl-buffer)
   :hook
   (cider-mode . eldoc-mode))
+
 ;; clj-refactor — refactoring operations built on top of CIDER.
 ;;
 ;; All commands are under the "C-c C-m" prefix (mnemonic: modifier).
@@ -190,6 +196,66 @@
   (cljr-auto-clean-ns nil)
   (cljr-warn-on-eval nil))
 
+(use-package exec-path-from-shell
+  :config
+  (dolist (var '("NIX_SSL_CERT_FILE" "NIX_PROFILES" "__ETC_PROFILE_NIX_SOURCED" "XDG_DATA_DIRS"))
+    (add-to-list 'exec-path-from-shell-variables var))
+  (exec-path-from-shell-initialize))
+
+
+(use-package org-journal
+  :defer t
+  :init
+  ;; Change default prefix key; needs to be set before loading org-journal
+  (setq org-journal-prefix-key "C-c j ")
+  :config
+  (setq org-journal-dir "~/org/journal/"
+        org-journal-date-format "%A, %d %B %Y"))
+
+(use-package org-roam
+  :custom
+  (org-roam-directory (file-truename "/home/jbullard/org"))
+  :bind (("C-c n l" . org-roam-buffer-toggle)
+         ("C-c n f" . org-roam-node-find)
+         ("C-c n g" . org-roam-graph)
+         ("C-c n i" . org-roam-node-insert)
+         ("C-c n c" . org-roam-capture)
+         ;; Dailies
+         ("C-c n j" . org-roam-dailies-capture-today))
+  :config
+  ;; If you're using a vertical completion framework, you might want a more informative completion interface
+
+  (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+  (org-roam-db-autosync-mode)
+  ;; If using org-roam-protocol
+  (require 'org-roam-protocol))
+
 ;;; ─── KEYBINDINGS ──────────────────────────────────────────────────────────
 ;; Make ESC quit prompts
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "C-c l") #'org-store-link)
+(global-set-key (kbd "C-c a") #'org-agenda)
+(global-set-key (kbd "C-c c") #'org-capture)
+(setopt use-short-answers t)
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   '("8c7e832be864674c220f9a9361c851917a93f921fedb7717b1b5ece47690c098" "8a015b9c62f50bf58bf2e71c875c060b0e217212b62d65b0b4a0cf7328dbb76c" default))
+ '(package-selected-packages
+   '(csv-mode org-roam nix-mode multiple-cursors clj-refactor cider clojure-mode rainbow-delimiters paredit rust-mode yaml-mode markdown-mode treesit-auto magit which-key corfu consult marginalia orderless vertico doom-modeline doom-themes))
+ '(safe-local-variable-values
+   '((cider-clojure-cli-aliases . "test:dev-front")
+     (cider-default-cljs-repl . custom)
+     (cider-preferred-build-tool . clojure-cli)
+     (cider-clojure-cli-aliases . "dev-front:test")
+     (cider-cljs-repl-type . "figwheel-main")
+     (cider-clojure-cli-global-options . "-M:calva:dev-front:test -m figwheel.main -b dev -r"))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
