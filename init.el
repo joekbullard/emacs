@@ -6,9 +6,12 @@
 (setq display-line-numbers-type 'relative) ; relative numbers (like vim); use t for absolute
 (require 'package)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-;; Comment/uncomment this line to enable MELPA Stable if desired.  See `package-archive-priorities`
-;; and `package-pinned-packages`. Most users will not need or want to do this.
-;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+;; Prefer tagged GNU/NonGNU ELPA releases over MELPA's rolling snapshots:
+;; MELPA's date-based versions (e.g. 20260721.2157) always sort higher than
+;; semantic versions (e.g. 4.6.0), so without this, package.el keeps pulling
+;; MELPA's bleeding-edge build even when a stable release exists elsewhere.
+(setq package-archive-priorities
+      '(("gnu" . 3) ("nongnu" . 2) ("melpa" . 1)))
 (package-initialize)
 (setq use-package-always-ensure t)   ; auto-install any missing use-package packages
 ;; Font — change to taste
