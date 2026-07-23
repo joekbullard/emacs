@@ -217,7 +217,7 @@
 
 (use-package org-roam
   :custom
-  (org-roam-directory (file-truename "/home/jbullard/org"))
+  (org-roam-directory (file-truename "~/org"))
   :bind (("C-c n l" . org-roam-buffer-toggle)
          ("C-c n f" . org-roam-node-find)
          ("C-c n g" . org-roam-graph)
@@ -229,6 +229,8 @@
   ;; If you're using a vertical completion framework, you might want a more informative completion interface
 
   (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+  (unless (file-directory-p org-roam-directory)
+    (make-directory org-roam-directory t))
   (org-roam-db-autosync-mode)
   ;; If using org-roam-protocol
   (require 'org-roam-protocol))
