@@ -83,13 +83,48 @@
   :config (global-treesit-auto-mode))
 ;;; ─── LSP: EGLOT  ────────────────────────────────
 (use-package eglot
-  :hook
-  ((python-ts-mode . eglot-ensure)
-   (js-ts-mode     . eglot-ensure)
-   (typescript-ts-mode . eglot-ensure)
-   (rust-ts-mode   . eglot-ensure))
+  :init
+  ;; Start eglot from `envrc-mode-hook', not the major-mode hooks directly:
+  ;; `envrc-mode' (below) turns on via `after-change-major-mode-hook', which
+  ;; Emacs always runs *after* a buffer's own mode hook (e.g.
+  ;; `python-ts-mode-hook'). Hooking eglot to the mode hook would race
+  ;; envrc's PATH setup and fail to find a project-local server such as
+  ;; basedpyright; hooking off envrc instead guarantees the per-project
+  ;; environment (see DIRENV below) is already in place first.
+  (add-hook 'envrc-mode-hook
+            (lambda ()
+              (when (derived-mode-p 'python-ts-mode 'js-ts-mode
+                                     'typescript-ts-mode 'rust-ts-mode)
+                (eglot-ensure))))
   :custom
-  (eglot-autoshutdown t))
+  (eglot-autoshutdown t)
+  :config
+  ;; basedpyright over eglot's stock pylsp default; comes from each project's
+  ;; own devShell (see PYTHON section below).
+  (add-to-list 'eglot-server-programs
+               '((python-mode python-ts-mode) . ("basedpyright-langserver" "--stdio"))))
+;;; ─── DIRENV ───────────────────────────────────────────────────────────────
+;; Per-project environments (Python venvs, tool versions) come from each
+;; project's own `.envrc' (typically `use flake'), not anything global.
+;; envrc-mode loads that environment into the buffer's `process-environment'/
+;; `exec-path' so eglot, compile, and shell commands all see it.
+(use-package envrc
+  :init (envrc-global-mode))
+;;; ─── FORMAT ON SAVE: APHELEIA ─────────────────────────────────────────────
+(use-package apheleia
+  :init (apheleia-global-mode t)
+  :config
+  ;; apheleia defaults python to black; use ruff instead since that's what
+  ;; we're installing per-project (see PYTHON below), not both.
+  (setf (alist-get 'python-mode apheleia-mode-alist) '(ruff-isort ruff))
+  (setf (alist-get 'python-ts-mode apheleia-mode-alist) '(ruff-isort ruff)))
+;;; ─── PYTHON ───────────────────────────────────────────────────────────────
+;; No Python interpreter or tooling is installed globally — each project
+;; supplies its own via a `flake.nix' devShell (python3, basedpyright, ruff)
+;; picked up through direnv. ruff covers linting (flymake, above) and
+;; formatting (apheleia, above); basedpyright covers types/nav/hover (eglot).
+(use-package flymake-ruff
+  :hook ((python-mode python-ts-mode) . flymake-ruff-load))
 ;;; ─── LANGUAGES ────────────────────────────────────────────────────────────
 (use-package markdown-mode)
 (use-package yaml-mode)
