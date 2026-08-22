@@ -4,16 +4,10 @@
 (column-number-mode t)               ; show column in modeline
 (global-display-line-numbers-mode t) ; line numbers everywhere
 (setq display-line-numbers-type 'relative) ; relative numbers (like vim); use t for absolute
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-;; Prefer tagged GNU/NonGNU ELPA releases over MELPA's rolling snapshots:
-;; MELPA's date-based versions (e.g. 20260721.2157) always sort higher than
-;; semantic versions (e.g. 4.6.0), so without this, package.el keeps pulling
-;; MELPA's bleeding-edge build even when a stable release exists elsewhere.
-(setq package-archive-priorities
-      '(("gnu" . 3) ("nongnu" . 2) ("melpa" . 1)))
-(package-initialize)
-(setq use-package-always-ensure t)   ; auto-install any missing use-package packages
+;; Packages are provided by Nix (see `programs.emacs.extraPackages' in
+;; nix-config's modules/home.nix) and are already on `load-path' before
+;; Emacs starts, so `use-package' below just requires them — no package.el,
+;; no MELPA fetch, no `:ensure'.
 ;; Font — change to taste
 (set-face-attribute 'default nil
                     :family "JetBrainsMono Nerd Font"
@@ -206,34 +200,15 @@
   (exec-path-from-shell-initialize))
 
 
-(use-package org-journal
-  :defer t
-  :init
-  ;; Change default prefix key; needs to be set before loading org-journal
-  (setq org-journal-prefix-key "C-c j ")
-  :config
-  (setq org-journal-dir "~/org/journal/"
-        org-journal-date-format "%A, %d %B %Y"))
-
-(use-package org-roam
+;;; ─── CLAUDE CODE IDE ──────────────────────────────────────────────────────
+;; Bridges Claude Code CLI into Emacs via MCP. Terminal backend is `ghostel'
+;; (libghostty-powered), Nix-installed alongside vterm/eat as alternatives.
+(use-package claude-code-ide
   :custom
-  (org-roam-directory (file-truename "~/org"))
-  :bind (("C-c n l" . org-roam-buffer-toggle)
-         ("C-c n f" . org-roam-node-find)
-         ("C-c n g" . org-roam-graph)
-         ("C-c n i" . org-roam-node-insert)
-         ("C-c n c" . org-roam-capture)
-         ;; Dailies
-         ("C-c n j" . org-roam-dailies-capture-today))
+  (claude-code-ide-terminal-backend 'ghostel)
+  :bind ("C-c C-'" . claude-code-ide-menu)
   :config
-  ;; If you're using a vertical completion framework, you might want a more informative completion interface
-
-  (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
-  (unless (file-directory-p org-roam-directory)
-    (make-directory org-roam-directory t))
-  (org-roam-db-autosync-mode)
-  ;; If using org-roam-protocol
-  (require 'org-roam-protocol))
+  (claude-code-ide-emacs-tools-setup))
 
 ;;; ─── KEYBINDINGS ──────────────────────────────────────────────────────────
 ;; Make ESC quit prompts
@@ -249,8 +224,6 @@
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    '("8c7e832be864674c220f9a9361c851917a93f921fedb7717b1b5ece47690c098" "8a015b9c62f50bf58bf2e71c875c060b0e217212b62d65b0b4a0cf7328dbb76c" default))
- '(package-selected-packages
-   '(csv-mode org-roam nix-mode multiple-cursors clj-refactor cider clojure-mode rainbow-delimiters paredit rust-mode yaml-mode markdown-mode treesit-auto magit which-key corfu consult marginalia orderless vertico doom-modeline doom-themes))
  '(safe-local-variable-values
    '((cider-clojure-cli-aliases . "test:dev-front")
      (cider-default-cljs-repl . custom)
