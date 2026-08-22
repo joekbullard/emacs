@@ -78,6 +78,11 @@
 ;; project.el is built-in; just add a keybinding
 (global-set-key (kbd "C-c p") project-prefix-map)
 ;;; ─── TREESITTER  ───────────────────────────────────────────────
+;; Grammars built by Nix (see EMACS_TREE_SITTER_GRAMMARS in nix-config's
+;; modules/home.nix) take priority over treesit-auto's runtime git-clone-
+;; and-compile install, which needs a C toolchain and network access.
+(when-let ((dir (getenv "EMACS_TREE_SITTER_GRAMMARS")))
+  (add-to-list 'treesit-extra-load-path dir))
 (use-package treesit-auto
   :custom (treesit-auto-install 'prompt)
   :config (global-treesit-auto-mode))
