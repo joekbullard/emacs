@@ -91,10 +91,16 @@
   ;; envrc's PATH setup and fail to find a project-local server such as
   ;; basedpyright; hooking off envrc instead guarantees the per-project
   ;; environment (see DIRENV below) is already in place first.
+  ;; Match both the tree-sitter and stock major modes: `treesit-auto' only
+  ;; remaps to the `-ts-mode' variant when its grammar is actually installed,
+  ;; which isn't guaranteed, so eglot must still start in plain `python-mode'
+  ;; et al.
   (add-hook 'envrc-mode-hook
             (lambda ()
-              (when (derived-mode-p 'python-ts-mode 'js-ts-mode
-                                     'typescript-ts-mode 'rust-ts-mode)
+              (when (derived-mode-p 'python-mode 'python-ts-mode
+                                     'js-mode 'js-ts-mode
+                                     'typescript-mode 'typescript-ts-mode
+                                     'rust-mode 'rust-ts-mode)
                 (eglot-ensure))))
   :custom
   (eglot-autoshutdown t)
